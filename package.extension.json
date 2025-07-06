@@ -1,0 +1,10 @@
+{
+  "name": "octra-web-wallet-extension",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build:extension": "node build-extension.js",
+    "dev:extension": "vite build --config vite.config.extension.ts --watch"
+  }
+}
