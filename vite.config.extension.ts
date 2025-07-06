@@ -33,11 +33,11 @@ export default defineConfig({
       },
       output: {
         entryFileNames: '[name].js',
-        chunkFileNames: 'assets/[name].js',
+        chunkFileNames: '[name]-[hash].js',
         assetFileNames: (assetInfo) => {
-          // Ensure CSS files have predictable names
+          // Put CSS directly in root for easier loading
           if (assetInfo.name?.endsWith('.css')) {
-            return 'popup.css'; // Put CSS directly in root, not in assets folder
+            return 'styles.css';
           }
           return 'assets/[name].[ext]';
         },
@@ -45,8 +45,8 @@ export default defineConfig({
     },
     target: 'esnext',
     minify: false,
-    cssCodeSplit: false, // Keep all CSS in one file
-    assetsInlineLimit: 0, // Don't inline any assets
+    cssCodeSplit: false,
+    assetsInlineLimit: 0,
   },
   define: {
     'process.env.NODE_ENV': JSON.stringify('production'),

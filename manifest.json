@@ -27,11 +27,11 @@
     "128": "icons/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'"
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com"
   },
   "web_accessible_resources": [
     {
-      "resources": ["popup.html", "popup.css", "popup.js", "assets/*"],
+      "resources": ["popup.html", "styles.css", "popup.js", "assets/*"],
       "matches": ["<all_urls>"]
     }
   ]

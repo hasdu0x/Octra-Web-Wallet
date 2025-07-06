@@ -18,14 +18,28 @@ try {
   process.exit(1);
 }
 
-// Copy manifest and other files
-console.log('📋 Copying manifest and assets...');
+console.log('📋 Post-build processing...');
+
+// List all files in dist-extension to debug
+console.log('📁 Files in dist-extension:');
+function listFiles(dir, prefix = '') {
+  const files = fs.readdirSync(dir);
+  files.forEach(file => {
+    const filePath = path.join(dir, file);
+    const stat = fs.statSync(filePath);
+    if (stat.isDirectory()) {
+      console.log(`${prefix}📁 ${file}/`);
+      listFiles(filePath, prefix + '  ');
+    } else {
+      console.log(`${prefix}📄 ${file} (${stat.size} bytes)`);
+    }
+  });
+}
+listFiles('dist-extension');
 
 // Copy manifest.json
 fs.copyFileSync('manifest.json', 'dist-extension/manifest.json');
-
-// Copy popup.html
-fs.copyFileSync('popup.html', 'dist-extension/popup.html');
+console.log('✅ Copied manifest.json');
 
 // Create icons directory and copy icons
 const iconsDir = 'dist-extension/icons';
@@ -33,12 +47,8 @@ if (!fs.existsSync(iconsDir)) {
   fs.mkdirSync(iconsDir, { recursive: true });
 }
 
-// Copy PNG icon files (prioritize PNG over SVG)
 const iconSizes = [16, 32, 48, 128];
-let iconsFound = 0;
-
 iconSizes.forEach(size => {
-  // First try PNG
   const pngFile = `icon${size}.png`;
   const pngSourcePath = path.join('public/icons', pngFile);
   const pngDestPath = path.join(iconsDir, pngFile);
@@ -46,95 +56,64 @@ iconSizes.forEach(size => {
   if (fs.existsSync(pngSourcePath)) {
     fs.copyFileSync(pngSourcePath, pngDestPath);
     console.log(`✅ Copied ${pngFile}`);
-    iconsFound++;
-  } else {
-    // Fallback to SVG if PNG doesn't exist
-    const svgFile = `icon${size}.svg`;
-    const svgSourcePath = path.join('public/icons', svgFile);
-    const svgDestPath = path.join(iconsDir, svgFile);
-    
-    if (fs.existsSync(svgSourcePath)) {
-      fs.copyFileSync(svgSourcePath, svgDestPath);
-      console.log(`✅ Copied ${svgFile}`);
-      iconsFound++;
-    } else {
-      // Create SVG as last resort
-      const svgContent = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 2}" fill="none" stroke="#3b82f6" stroke-width="4"/>
-  <circle cx="${size/2}" cy="${size/2}" r="${size/4}" fill="#3b82f6"/>
-</svg>`;
-      fs.writeFileSync(svgDestPath, svgContent);
-      console.log(`✅ Created ${svgFile} (fallback)`);
-      iconsFound++;
-    }
   }
 });
 
-console.log(`📁 Found and copied ${iconsFound} icon files`);
-
-// Fix CSS loading - ensure CSS is properly linked
-console.log('🎨 Fixing CSS loading...');
-
-// Check if CSS file exists in root
-const rootCssPath = 'dist-extension/popup.css';
-const assetsCssPath = 'dist-extension/assets/popup.css';
-
+// Find and process CSS file
+console.log('🎨 Processing CSS...');
+let cssContent = '';
 let cssFound = false;
-let cssFileName = 'popup.css';
 
-if (fs.existsSync(rootCssPath)) {
+// Look for CSS files
+const possibleCssFiles = [
+  'dist-extension/styles.css',
+  'dist-extension/popup.css',
+  'dist-extension/assets/styles.css',
+  'dist-extension/assets/popup.css'
+];
+
+// Also check for any CSS file in the directory
+const allFiles = fs.readdirSync('dist-extension');
+const cssFiles = allFiles.filter(file => file.endsWith('.css'));
+
+if (cssFiles.length > 0) {
+  const cssFile = cssFiles[0];
+  cssContent = fs.readFileSync(path.join('dist-extension', cssFile), 'utf8');
   cssFound = true;
-  cssFileName = 'popup.css';
-  console.log('✅ Found popup.css in root');
-} else if (fs.existsSync(assetsCssPath)) {
-  // Move CSS from assets to root for easier loading
-  fs.copyFileSync(assetsCssPath, rootCssPath);
-  cssFound = true;
-  cssFileName = 'popup.css';
-  console.log('✅ Moved popup.css from assets to root');
+  console.log(`✅ Found CSS file: ${cssFile} (${cssContent.length} chars)`);
+  
+  // Ensure it's named styles.css
+  if (cssFile !== 'styles.css') {
+    fs.writeFileSync('dist-extension/styles.css', cssContent);
+    fs.unlinkSync(path.join('dist-extension', cssFile));
+    console.log(`✅ Renamed ${cssFile} to styles.css`);
+  }
 } else {
-  // Look for any CSS file in assets directory
+  // Check assets directory
   const assetsDir = 'dist-extension/assets';
   if (fs.existsSync(assetsDir)) {
-    const files = fs.readdirSync(assetsDir);
-    const cssFile = files.find(file => file.endsWith('.css'));
+    const assetFiles = fs.readdirSync(assetsDir);
+    const assetCssFiles = assetFiles.filter(file => file.endsWith('.css'));
     
-    if (cssFile) {
-      const sourcePath = path.join(assetsDir, cssFile);
-      fs.copyFileSync(sourcePath, rootCssPath);
+    if (assetCssFiles.length > 0) {
+      const cssFile = assetCssFiles[0];
+      cssContent = fs.readFileSync(path.join(assetsDir, cssFile), 'utf8');
       cssFound = true;
-      cssFileName = 'popup.css';
-      console.log(`✅ Found and moved ${cssFile} to popup.css`);
+      console.log(`✅ Found CSS in assets: ${cssFile} (${cssContent.length} chars)`);
+      
+      // Copy to root as styles.css
+      fs.writeFileSync('dist-extension/styles.css', cssContent);
+      console.log('✅ Copied CSS to root as styles.css');
     }
   }
 }
 
-// Update popup.html to ensure CSS is loaded correctly
-console.log('🔧 Updating popup.html...');
-let popupHtml = fs.readFileSync('dist-extension/popup.html', 'utf8');
-
-// Remove any existing CSS links
-popupHtml = popupHtml.replace(/<link[^>]*rel="stylesheet"[^>]*>/g, '');
-
-// Add CSS link before closing head tag
-if (cssFound) {
-  popupHtml = popupHtml.replace(
-    '</head>',
-    `    <link rel="stylesheet" href="${cssFileName}">\n  </head>`
-  );
-  console.log(`✅ Added CSS link: ${cssFileName}`);
-} else {
-  console.log('⚠️ No CSS file found, using inline styles only');
-}
-
-fs.writeFileSync('dist-extension/popup.html', popupHtml);
-
-// Create a comprehensive fallback CSS if main CSS is missing
-if (!cssFound) {
-  console.log('⚠️ Main CSS not found, creating comprehensive fallback...');
+// Create comprehensive CSS if none found
+if (!cssFound || cssContent.length < 1000) {
+  console.log('⚠️ Creating comprehensive CSS...');
   
-  const fallbackCSS = `
-/* Comprehensive Fallback CSS for Octra Web Wallet Extension */
+  const comprehensiveCSS = `
+/* Octra Web Wallet Extension Styles */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 /* CSS Variables */
@@ -164,40 +143,46 @@ if (!cssFound) {
 .dark {
   --background: 222.2 84% 4.9%;
   --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
+  --card: 222.2 84% 6%;
   --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
+  --popover: 222.2 84% 6%;
   --popover-foreground: 210 40% 98%;
   --primary: 217.2 91% 59.8%;
   --primary-foreground: 222.2 84% 4.9%;
   --secondary: 217.2 32.6% 17.5%;
   --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
+  --muted: 217.2 32.6% 15%;
   --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
+  --accent: 217.2 32.6% 15%;
   --accent-foreground: 210 40% 98%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
+  --border: 217.2 32.6% 20%;
+  --input: 217.2 32.6% 20%;
   --ring: 224.3 76.3% 94.1%;
 }
 
 /* Base styles */
-* {
+*, *::before, *::after {
   box-sizing: border-box;
   border-color: hsl(var(--border));
 }
 
-body {
+* {
   margin: 0;
-  padding: 0;
+}
+
+body {
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   background: hsl(var(--background));
   color: hsl(var(--foreground));
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  width: 400px;
+  height: 600px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 #root {
@@ -205,10 +190,14 @@ body {
   height: 100%;
 }
 
-/* Layout utilities */
+/* Tailwind-like utilities */
 .min-h-screen { min-height: 100vh; }
 .w-full { width: 100%; }
 .h-full { height: 100%; }
+.h-6 { height: 1.5rem; }
+.h-8 { height: 2rem; }
+.w-6 { width: 1.5rem; }
+.w-8 { width: 2rem; }
 .flex { display: flex; }
 .grid { display: grid; }
 .hidden { display: none; }
@@ -217,6 +206,10 @@ body {
 .justify-center { justify-content: center; }
 .justify-between { justify-content: space-between; }
 .flex-col { flex-direction: column; }
+.flex-1 { flex: 1 1 0%; }
+.flex-shrink-0 { flex-shrink: 0; }
+
+/* Spacing */
 .space-x-1 > * + * { margin-left: 0.25rem; }
 .space-x-2 > * + * { margin-left: 0.5rem; }
 .space-x-3 > * + * { margin-left: 0.75rem; }
@@ -227,7 +220,6 @@ body {
 .gap-2 { gap: 0.5rem; }
 .gap-3 { gap: 0.75rem; }
 
-/* Spacing */
 .p-1 { padding: 0.25rem; }
 .p-2 { padding: 0.5rem; }
 .p-3 { padding: 0.75rem; }
@@ -236,7 +228,6 @@ body {
 .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
 .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
 .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
-.m-0 { margin: 0; }
 .mt-2 { margin-top: 0.5rem; }
 .mt-3 { margin-top: 0.75rem; }
 .mb-2 { margin-bottom: 0.5rem; }
@@ -258,6 +249,8 @@ body {
 .text-red-500 { color: rgb(239 68 68); }
 .text-green-500 { color: rgb(34 197 94); }
 .text-red-600 { color: rgb(220 38 38); }
+.font-mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace; }
+.break-all { word-break: break-all; }
 
 /* Backgrounds */
 .bg-white { background-color: rgb(255 255 255); }
@@ -268,6 +261,7 @@ body {
 .to-slate-100 { --tw-gradient-to: #f1f5f9; }
 .dark .from-slate-900 { --tw-gradient-from: #0f172a; }
 .dark .to-slate-800 { --tw-gradient-to: #1e293b; }
+.backdrop-blur-sm { backdrop-filter: blur(4px); }
 
 /* Borders */
 .border { border-width: 1px; border-style: solid; }
@@ -299,6 +293,8 @@ button {
   border: 1px solid transparent;
   padding: 0.5rem 1rem;
   height: 2.25rem;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
 }
 
 button:disabled {
@@ -306,26 +302,25 @@ button:disabled {
   opacity: 0.5;
 }
 
-/* Button variants */
-.btn-default {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
-
-.btn-default:hover {
+button:hover {
   background: hsl(var(--primary) / 0.9);
 }
 
+/* Button variants */
 .btn-outline {
   border: 1px solid hsl(var(--input));
   background: hsl(var(--background));
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  color: hsl(var(--foreground));
 }
 
 .btn-outline:hover {
   background: hsl(var(--accent));
   color: hsl(var(--accent-foreground));
+}
+
+.btn-ghost {
+  background: transparent;
+  color: hsl(var(--foreground));
 }
 
 .btn-ghost:hover {
@@ -342,7 +337,7 @@ button:disabled {
 /* Tabs */
 .tabs-list {
   display: inline-flex;
-  height: 2.25rem;
+  height: 2rem;
   align-items: center;
   justify-content: center;
   border-radius: calc(var(--radius) + 2px);
@@ -357,13 +352,14 @@ button:disabled {
   justify-content: center;
   white-space: nowrap;
   border-radius: calc(var(--radius) - 2px);
-  padding: 0.375rem 0.75rem;
-  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
   font-weight: 500;
   transition: all 0.2s;
   cursor: pointer;
   border: none;
   background: transparent;
+  color: inherit;
 }
 
 .tabs-trigger[data-state="active"] {
@@ -376,8 +372,8 @@ button:disabled {
 .avatar {
   position: relative;
   display: flex;
-  height: 2.5rem;
-  width: 2.5rem;
+  height: 2rem;
+  width: 2rem;
   flex-shrink: 0;
   overflow: hidden;
   border-radius: 50%;
@@ -390,7 +386,8 @@ button:disabled {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: hsl(var(--muted));
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
 }
 
 /* Badge */
@@ -399,21 +396,10 @@ button:disabled {
   align-items: center;
   border-radius: calc(var(--radius) - 2px);
   border: 1px solid transparent;
-  padding: 0.125rem 0.625rem;
+  padding: 0.125rem 0.5rem;
   font-size: 0.75rem;
   font-weight: 600;
   transition: all 0.2s;
-}
-
-.badge-default {
-  border: transparent;
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
-
-.badge-secondary {
-  border: transparent;
   background: hsl(var(--secondary));
   color: hsl(var(--secondary-foreground));
 }
@@ -425,9 +411,18 @@ button:disabled {
 /* Overflow */
 .overflow-hidden { overflow: hidden; }
 .overflow-y-auto { overflow-y: auto; }
+.overflow-auto { overflow: auto; }
 
 /* Max height */
 .max-h-40 { max-height: 10rem; }
+
+/* Positioning */
+.sticky { position: sticky; }
+.top-0 { top: 0; }
+.z-50 { z-index: 50; }
+
+/* Transitions */
+.transition-colors { transition: color 0.2s, background-color 0.2s, border-color 0.2s; }
 
 /* Loading state */
 .loading {
@@ -439,96 +434,120 @@ button:disabled {
   color: hsl(var(--muted-foreground));
 }
 
-/* Backdrop blur */
-.backdrop-blur-sm {
-  backdrop-filter: blur(4px);
-}
-
-/* Sticky positioning */
-.sticky { position: sticky; }
-.top-0 { top: 0; }
-
-/* Z-index */
-.z-50 { z-index: 50; }
+/* Dark mode specific */
+.dark .bg-white { background-color: hsl(var(--card)); }
+.dark .text-muted-foreground { color: hsl(var(--muted-foreground)); }
 
 /* Responsive utilities */
 @media (max-width: 640px) {
   .sm\\:inline-flex { display: inline-flex; }
 }
 
-/* Dark mode adjustments */
-.dark .bg-white { background-color: hsl(var(--card)); }
-.dark .text-muted-foreground { color: hsl(var(--muted-foreground)); }
-
-/* Font mono for addresses and keys */
-.font-mono {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
-}
-
-/* Break all for long text */
-.break-all {
-  word-break: break-all;
-}
-
-/* Flex-1 */
-.flex-1 { flex: 1 1 0%; }
-
-/* Flex-shrink-0 */
-.flex-shrink-0 { flex-shrink: 0; }
-
-/* Transitions */
-.transition-colors { transition: color 0.2s, background-color 0.2s, border-color 0.2s; }
-
-/* Hover states */
+/* Focus and hover states */
 .hover\\:bg-accent:hover { background-color: hsl(var(--accent)); }
 .hover\\:text-accent-foreground:hover { color: hsl(var(--accent-foreground)); }
-
-/* Focus states */
 .focus-visible\\:outline-none:focus-visible { outline: 2px solid transparent; outline-offset: 2px; }
 .focus-visible\\:ring-1:focus-visible { box-shadow: 0 0 0 1px hsl(var(--ring)); }
 
-/* Container max width */
-.container {
+/* Additional component styles */
+input, textarea {
+  display: flex;
+  height: 2.25rem;
   width: 100%;
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid hsl(var(--input));
+  background: transparent;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  transition: all 0.2s;
 }
 
-@media (min-width: 640px) {
-  .container { max-width: 640px; }
+input:focus, textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 1px hsl(var(--ring));
 }
 
-@media (min-width: 768px) {
-  .container { max-width: 768px; }
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
 }
 
-@media (min-width: 1024px) {
-  .container { max-width: 1024px; }
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
 }
 
-@media (min-width: 1280px) {
-  .container { max-width: 1280px; }
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
 }
 
-@media (min-width: 1536px) {
-  .container { max-width: 1536px; }
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
 }
 `;
 
-  fs.writeFileSync(rootCssPath, fallbackCSS);
-  console.log('✅ Created comprehensive fallback CSS');
-  
-  // Update HTML to include the fallback CSS
-  popupHtml = popupHtml.replace(
-    '</head>',
-    `    <link rel="stylesheet" href="popup.css">\n  </head>`
-  );
-  fs.writeFileSync('dist-extension/popup.html', popupHtml);
+  fs.writeFileSync('dist-extension/styles.css', comprehensiveCSS);
+  console.log(`✅ Created comprehensive CSS (${comprehensiveCSS.length} chars)`);
+  cssFound = true;
 }
 
-console.log('✅ Chrome extension built successfully!');
+// Create optimized popup.html
+console.log('🔧 Creating optimized popup.html...');
+const popupHtml = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Octra Web Wallet</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+      /* Critical inline styles for immediate loading */
+      body {
+        width: 400px !important;
+        height: 600px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
+      }
+      
+      #root {
+        width: 100% !important;
+        height: 100% !important;
+      }
+      
+      .loading {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        height: 100vh !important;
+        font-size: 14px !important;
+        background: #f8fafc !important;
+        color: #1e293b !important;
+      }
+      
+      .dark .loading {
+        background: #0f172a !important;
+        color: #f8fafc !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div class="loading">Loading Octra Wallet...</div>
+    </div>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>`;
+
+fs.writeFileSync('dist-extension/popup.html', popupHtml);
+console.log('✅ Created optimized popup.html');
+
+// Verify final structure
+console.log('\n📁 Final extension structure:');
+listFiles('dist-extension');
+
+console.log('\n✅ Chrome extension built successfully!');
 console.log('📁 Extension files are in the "dist-extension" directory');
 console.log('');
 console.log('🔧 To install the extension:');
@@ -537,4 +556,4 @@ console.log('2. Enable "Developer mode" in the top right');
 console.log('3. Click "Load unpacked" and select the "dist-extension" folder');
 console.log('4. The Octra Web Wallet extension should now appear in your extensions');
 console.log('');
-console.log('🎉 Ready to install! CSS loading has been fixed.');
+console.log('🎉 CSS loading has been optimized and should work now!');
