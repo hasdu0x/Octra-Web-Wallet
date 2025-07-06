@@ -11,7 +11,12 @@ if (fs.existsSync('dist-extension')) {
 
 // Build the extension
 console.log('📦 Building extension files...');
-execSync('vite build --config vite.config.extension.ts', { stdio: 'inherit' });
+try {
+  execSync('vite build --config vite.config.extension.ts', { stdio: 'inherit' });
+} catch (error) {
+  console.error('❌ Build failed:', error.message);
+  process.exit(1);
+}
 
 // Copy manifest and other files
 console.log('📋 Copying manifest and assets...');
@@ -28,27 +33,27 @@ if (!fs.existsSync(iconsDir)) {
   fs.mkdirSync(iconsDir, { recursive: true });
 }
 
-// Copy icon files
-const iconFiles = ['icon16.png', 'icon32.png', 'icon48.png', 'icon128.png'];
-iconFiles.forEach(iconFile => {
-  const sourcePath = path.join('public/icons', iconFile);
-  const destPath = path.join(iconsDir, iconFile);
-  
-  if (fs.existsSync(sourcePath)) {
-    fs.copyFileSync(sourcePath, destPath);
-    console.log(`✅ Copied ${iconFile}`);
-  } else {
-    console.warn(`⚠️  Icon file not found: ${sourcePath}`);
-  }
+// Copy icon files (both SVG and PNG if they exist)
+const iconExtensions = ['svg', 'png'];
+const iconSizes = [16, 32, 48, 128];
+
+iconSizes.forEach(size => {
+  iconExtensions.forEach(ext => {
+    const iconFile = `icon${size}.${ext}`;
+    const sourcePath = path.join('public/icons', iconFile);
+    const destPath = path.join(iconsDir, iconFile);
+    
+    if (fs.existsSync(sourcePath)) {
+      fs.copyFileSync(sourcePath, destPath);
+      console.log(`✅ Copied ${iconFile}`);
+    }
+  });
 });
 
 // Update popup.html to reference the built JS file
 console.log('🔧 Updating popup.html...');
 let popupHtml = fs.readFileSync('dist-extension/popup.html', 'utf8');
-popupHtml = popupHtml.replace(
-  '<script type="module" src="popup.js"></script>',
-  '<script type="module" src="popup.js"></script>'
-);
+// The build process should handle this automatically, but let's make sure
 fs.writeFileSync('dist-extension/popup.html', popupHtml);
 
 console.log('✅ Chrome extension built successfully!');
@@ -59,3 +64,5 @@ console.log('1. Open Chrome and go to chrome://extensions/');
 console.log('2. Enable "Developer mode" in the top right');
 console.log('3. Click "Load unpacked" and select the "dist-extension" folder');
 console.log('4. The Octra Web Wallet extension should now appear in your extensions');
+console.log('');
+console.log('📝 Note: SVG icons were created. For production, consider converting to PNG format.');
