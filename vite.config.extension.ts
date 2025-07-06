@@ -34,13 +34,25 @@ export default defineConfig({
       output: {
         entryFileNames: '[name].js',
         chunkFileNames: '[name].js',
-        assetFileNames: '[name].[ext]',
+        assetFileNames: (assetInfo) => {
+          // Ensure CSS files have predictable names
+          if (assetInfo.name?.endsWith('.css')) {
+            return 'assets/popup.css';
+          }
+          return 'assets/[name].[ext]';
+        },
       },
     },
     target: 'esnext',
     minify: false,
+    cssCodeSplit: false, // Keep all CSS in one file
   },
   define: {
     'process.env.NODE_ENV': JSON.stringify('production'),
+  },
+  css: {
+    postcss: {
+      plugins: [],
+    },
   },
 });
