@@ -12,11 +12,32 @@ const removeLoading = () => {
   }
 };
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ExtensionApp />
-  </StrictMode>
-);
+// Ensure DOM is ready
+const initApp = () => {
+  const rootElement = document.getElementById('root');
+  if (!rootElement) {
+    console.error('Root element not found');
+    return;
+  }
 
-// Remove loading indicator after a short delay
-setTimeout(removeLoading, 100);
+  // Clear any existing content
+  rootElement.innerHTML = '';
+
+  // Create React root and render app
+  const root = createRoot(rootElement);
+  root.render(
+    <StrictMode>
+      <ExtensionApp />
+    </StrictMode>
+  );
+
+  // Remove loading indicator after a short delay
+  setTimeout(removeLoading, 100);
+};
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
