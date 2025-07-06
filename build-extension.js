@@ -1,6 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+import fs from 'fs';
+import path from 'path';
+import { execSync } from 'child_process';
 
 console.log('🚀 Building Octra Web Wallet Chrome Extension...');
 
@@ -48,6 +48,21 @@ iconSizes.forEach(size => {
       console.log(`✅ Copied ${iconFile}`);
     }
   });
+});
+
+// Create simple SVG icons if PNG icons don't exist
+iconSizes.forEach(size => {
+  const pngPath = path.join(iconsDir, `icon${size}.png`);
+  const svgPath = path.join(iconsDir, `icon${size}.svg`);
+  
+  if (!fs.existsSync(pngPath) && !fs.existsSync(svgPath)) {
+    const svgContent = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 2}" fill="none" stroke="#3b82f6" stroke-width="4"/>
+  <circle cx="${size/2}" cy="${size/2}" r="${size/4}" fill="#3b82f6"/>
+</svg>`;
+    fs.writeFileSync(svgPath, svgContent);
+    console.log(`✅ Created ${`icon${size}.svg`}`);
+  }
 });
 
 // Update popup.html to reference the built JS file
