@@ -3,15 +3,20 @@
   "name": "Octra Web Wallet",
   "version": "1.0.0",
   "description": "Secure web wallet for the Octra blockchain",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "tabs"
   ],
   "host_permissions": [
     "https://octra.network/*"
   ],
   "action": {
-    "default_popup": "index.html",
+    "default_popup": "popup.html",
     "default_title": "Octra Web Wallet",
     "default_icon": {
       "16": "icon16.png",

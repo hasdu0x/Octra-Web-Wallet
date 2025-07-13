@@ -41,9 +41,10 @@ interface TxHistoryProps {
   transactions: Transaction[];
   onTransactionsUpdate: (transactions: Transaction[]) => void;
   isLoading?: boolean;
+  isPopup?: boolean;
 }
 
-export function TxHistory({ wallet, transactions, onTransactionsUpdate, isLoading = false }: TxHistoryProps) {
+export function TxHistory({ wallet, transactions, onTransactionsUpdate, isLoading = false, isPopup = false }: TxHistoryProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTx, setSelectedTx] = useState<TransactionDetails | PendingTransaction | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -191,7 +192,7 @@ export function TxHistory({ wallet, transactions, onTransactionsUpdate, isLoadin
   const pendingCount = transactions.filter(tx => tx.status === 'pending').length;
 
   return (
-    <Card>
+    <Card className={isPopup ? 'text-sm' : ''}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="flex items-center gap-2">
           <History className="h-5 w-5" />
@@ -214,7 +215,7 @@ export function TxHistory({ wallet, transactions, onTransactionsUpdate, isLoadin
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="space-y-4">
+          <div className={`${isPopup ? 'space-y-2' : 'space-y-4'}`}>
             <div className="text-sm text-muted-foreground">Loading transactions...</div>
             {[...Array(3)].map((_, i) => (
               <div key={i} className="space-y-2">
@@ -231,14 +232,14 @@ export function TxHistory({ wallet, transactions, onTransactionsUpdate, isLoadin
             </AlertDescription>
           </Alert>
         ) : (
-          <div className="space-y-4">
+          <div className={`${isPopup ? 'space-y-2' : 'space-y-4'}`}>
             <div className="text-sm text-muted-foreground">
               Recent {transactions.length} transactions
               {pendingCount > 0 && ` (${pendingCount} pending)`}
             </div>
             {transactions.map((tx, index) => (
               <div key={tx.hash || index}>
-                <div className="space-y-3">
+                <div className={`${isPopup ? 'space-y-2' : 'space-y-3'}`}>
                   {/* Transaction Header */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -257,7 +258,7 @@ export function TxHistory({ wallet, transactions, onTransactionsUpdate, isLoadin
                     </div>
                     <div className="flex items-center gap-2">
                       <Dialog>
-                        <DialogTrigger asChild>
+                        {!isPopup && <DialogTrigger asChild>
                           <Button 
                             variant="ghost" 
                             size="sm"
@@ -265,7 +266,7 @@ export function TxHistory({ wallet, transactions, onTransactionsUpdate, isLoadin
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                        </DialogTrigger>
+                        </DialogTrigger>}
                         <DialogContent className="max-w-2xl">
                           <DialogHeader>
                             <DialogTitle>Transaction Details</DialogTitle>
@@ -491,7 +492,7 @@ export function TxHistory({ wallet, transactions, onTransactionsUpdate, isLoadin
                           )}
                         </DialogContent>
                       </Dialog>
-                      {tx.status === 'confirmed' && (
+                      {tx.status === 'confirmed' && !isPopup && (
                         <Button variant="ghost" size="sm" asChild>
                           <a
                             href={`https://octrascan.io/tx/${tx.hash}`}
@@ -506,7 +507,7 @@ export function TxHistory({ wallet, transactions, onTransactionsUpdate, isLoadin
                   </div>
 
                   {/* Transaction Details */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
+                  <div className={`grid grid-cols-1 ${isPopup ? 'gap-2 text-xs' : 'sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm'}`}>
                     <div className="space-y-2">
                       <div>
                         <span className="text-muted-foreground">Amount:</span>
@@ -532,16 +533,16 @@ export function TxHistory({ wallet, transactions, onTransactionsUpdate, isLoadin
                       </div>
                       <div>
                         <span className="text-muted-foreground">Hash:</span>
-                        <div className="font-mono break-all text-xs">{truncateHash(tx.hash || 'N/A')}</div>
+                        <div className={`font-mono break-all ${isPopup ? 'text-xs' : 'text-xs'}`}>{truncateHash(tx.hash || 'N/A')}</div>
                       </div>
                     </div>
-                    <div className="space-y-2">
+                    <div className={`space-y-2 ${isPopup ? 'mt-2' : ''}`}>
                       <div>
                         <span className="text-muted-foreground">
                           {tx.type === 'sent' ? 'To:' : 'From:'}
                         </span>
                         <div className="font-mono">
-                          <span className="break-all text-xs">{truncateAddress(tx.type === 'sent' ? tx.to : tx.from)}</span>
+                          <span className={`break-all ${isPopup ? 'text-xs' : 'text-xs'}`}>{truncateAddress(tx.type === 'sent' ? tx.to : tx.from)}</span>
                         </div>
                       </div>
                       <div>
@@ -552,7 +553,7 @@ export function TxHistory({ wallet, transactions, onTransactionsUpdate, isLoadin
                   </div>
                 </div>
                 
-                {index < transactions.length - 1 && <Separator className="mt-4" />}
+                {index < transactions.length - 1 && <Separator className={`${isPopup ? 'mt-2' : 'mt-4'}`} />}
               </div>
             ))}
           </div>

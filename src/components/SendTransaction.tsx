@@ -19,9 +19,10 @@ interface SendTransactionProps {
   onBalanceUpdate: (balance: number) => void;
   onNonceUpdate: (nonce: number) => void;
   onTransactionSuccess: () => void;
+  isPopup?: boolean;
 }
 
-export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNonceUpdate, onTransactionSuccess }: SendTransactionProps) {
+export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNonceUpdate, onTransactionSuccess, isPopup = false }: SendTransactionProps) {
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
@@ -202,14 +203,14 @@ export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNon
   const currentBalance = balance || 0;
 
   return (
-    <Card>
+    <Card className={isPopup ? 'text-sm' : ''}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Send className="h-5 w-5" />
           Send Transaction
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className={`${isPopup ? 'space-y-3' : 'space-y-6'}`}>
         <Alert>
           <div className="flex items-start space-x-3">
             <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
@@ -220,7 +221,7 @@ export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNon
         </Alert>
 
         {/* Wallet Info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {!isPopup && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>From Address</Label>
             <div className="p-3 bg-muted rounded-md font-mono text-sm break-all">
@@ -233,7 +234,7 @@ export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNon
               {currentBalance.toFixed(8)} OCT
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* Recipient Address */}
         <div className="space-y-2">
@@ -268,7 +269,7 @@ export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNon
         </div>
 
         {/* Message Field */}
-        <div className="space-y-2">
+        {!isPopup && <div className="space-y-2">
           <Label htmlFor="message" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
             Message ( Optional )
@@ -285,11 +286,11 @@ export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNon
             <span>This message will be included in the transaction</span>
             <span>{message.length}/1024</span>
           </div>
-        </div>
+        </div>}
 
         {/* Fee Calculation */}
-        {amount && validateAmount(amount) && (
-          <div className="p-3 bg-muted rounded-md space-y-2">
+        {amount && validateAmount(amount) && !isPopup && (
+          <div className="p-3 bg-muted rounded-md space-y-2 text-sm">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Calculator className="h-4 w-4" />
               Fee Calculation
@@ -323,7 +324,7 @@ export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNon
 
         {/* Transaction Result */}
         {result && (
-          <div className={`rounded-lg p-4 ${result.success ? 'bg-green-50 border border-green-200 dark:bg-green-950/50 dark:border-green-800' : 'bg-red-50 border border-red-200 dark:bg-red-950/50 dark:border-red-800'}`}>
+          <div className={`rounded-lg ${isPopup ? 'p-2' : 'p-4'} ${result.success ? 'bg-green-50 border border-green-200 dark:bg-green-950/50 dark:border-green-800' : 'bg-red-50 border border-red-200 dark:bg-red-950/50 dark:border-red-800'}`}>
             <div className="flex items-start space-x-2">
               {result.success ? (
                 <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mr-2 mt-0.5 flex-shrink-0" />
@@ -331,14 +332,14 @@ export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNon
                 <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mr-2 mt-0.5 flex-shrink-0" />
               )}
               <div className="flex-1">
-                <p className={`text-sm font-medium ${result.success ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}`}>
+                <p className={`${isPopup ? 'text-xs' : 'text-sm'} font-medium ${result.success ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}`}>
                   {result.success ? 'Transaction Sent Successfully!' : 'Transaction Failed'}
                 </p>
                 {result.success && result.hash && (
                   <div className="mt-2">
                     <p className="text-green-700 dark:text-green-300 text-sm">Transaction Hash:</p>
                     <div className="flex flex-col sm:flex-row sm:items-center mt-1 space-y-1 sm:space-y-0 sm:space-x-2">
-                      <code className="text-xs bg-green-100 dark:bg-green-900/50 px-2 py-1 rounded font-mono break-all text-green-800 dark:text-green-200 flex-1">
+                      <code className={`${isPopup ? 'text-xs' : 'text-xs'} bg-green-100 dark:bg-green-900/50 px-2 py-1 rounded font-mono break-all text-green-800 dark:text-green-200 flex-1`}>
                         {result.hash}
                       </code>
                       <div className="flex space-x-1">
@@ -364,7 +365,7 @@ export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNon
                   </div>
                 )}
                 {result.error && (
-                  <p className="text-red-700 dark:text-red-300 text-sm mt-1 break-words">{result.error}</p>
+                  <p className={`text-red-700 dark:text-red-300 ${isPopup ? 'text-xs' : 'text-sm'} mt-1 break-words`}>{result.error}</p>
                 )}
               </div>
             </div>
@@ -380,7 +381,7 @@ export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNon
             totalCost > currentBalance ||
             Boolean(message && message.length > 1024)
           }
-          className="w-full"
+          className={`w-full ${isPopup ? 'text-sm' : ''}`}
           size="lg"
         >
           {isSending ? "Sending..." : `Send ${amountNum.toFixed(8)} OCT`}

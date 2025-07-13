@@ -16,9 +16,10 @@ interface BalanceProps {
   balance: number | null;
   onBalanceUpdate: (balance: number) => void;
   isLoading?: boolean;
+  isPopup?: boolean;
 }
 
-export function Balance({ wallet, balance, onBalanceUpdate, isLoading = false }: BalanceProps) {
+export function Balance({ wallet, balance, onBalanceUpdate, isLoading = false, isPopup = false }: BalanceProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [encryptedBalance, setEncryptedBalance] = useState<any>(null);
@@ -109,9 +110,9 @@ export function Balance({ wallet, balance, onBalanceUpdate, isLoading = false }:
   return (
     <div className="space-y-6">
       {/* Balance Overview */}
-      <Card>
+      <Card className={isPopup ? 'text-sm' : ''}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-2xl font-bold">Wallet Overview</CardTitle>
+          <CardTitle className={`${isPopup ? 'text-lg' : 'text-2xl'} font-bold`}>Wallet Overview</CardTitle>
           <Button
             variant="outline"
             size="sm"
@@ -122,9 +123,9 @@ export function Balance({ wallet, balance, onBalanceUpdate, isLoading = false }:
             Refresh
           </Button>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className={`${isPopup ? 'space-y-3' : 'space-y-6'}`}>
           {/* Public Balance */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className={`grid grid-cols-1 ${isPopup ? 'gap-3' : 'md:grid-cols-2 gap-6'}`}>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Wallet className="h-4 w-4 text-blue-500" />
@@ -134,7 +135,7 @@ export function Balance({ wallet, balance, onBalanceUpdate, isLoading = false }:
                 <Skeleton className="h-8 w-32" />
               ) : (
                 <div className="flex items-center gap-x-2">
-                  <div className="text-2xl font-bold text-blue-600">
+                  <div className={`${isPopup ? 'text-lg' : 'text-2xl'} font-bold text-blue-600`}>
                     {balance !== null ? `${balance.toFixed(8)}` : '0.00000000'}
                   </div>
                   <Badge variant="secondary" className="text-xs font-bold mt-0.5">
@@ -145,7 +146,7 @@ export function Balance({ wallet, balance, onBalanceUpdate, isLoading = false }:
             </div>
 
             {/* Encrypted Balance */}
-            <div className="space-y-2">
+            <div className={`space-y-2 ${isPopup ? 'mt-3' : ''}`}>
               <div className="flex items-center gap-2">
                 <Lock className="h-4 w-4 text-yellow-500" />
                 <span className="text-sm font-medium text-muted-foreground">Private Balance</span>
@@ -154,7 +155,7 @@ export function Balance({ wallet, balance, onBalanceUpdate, isLoading = false }:
                 <Skeleton className="h-8 w-32" />
               ) : (
                 <div className="flex items-center gap-x-2">
-                  <div className="text-2xl font-bold text-yellow-600">
+                  <div className={`${isPopup ? 'text-lg' : 'text-2xl'} font-bold text-yellow-600`}>
                     {encryptedBalance ? `${encryptedBalance.encrypted.toFixed(8)}` : '0.00000000'}
                   </div>
                   <Badge variant="secondary" className="text-xs font-bold mt-0.5">
@@ -166,7 +167,7 @@ export function Balance({ wallet, balance, onBalanceUpdate, isLoading = false }:
           </div>
 
           {/* Total Balance */}
-          {encryptedBalance && (
+          {encryptedBalance && !isPopup && (
             <div className="pt-5 border-t">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-muted-foreground">Total Balance</span>
@@ -178,7 +179,7 @@ export function Balance({ wallet, balance, onBalanceUpdate, isLoading = false }:
           )}
 
           {/* Pending Transfers */}
-          {pendingTransfers.length > 0 && (
+          {pendingTransfers.length > 0 && !isPopup && (
             <div className="pt-5 border-t">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-muted-foreground">Claimable Transfers</span>
@@ -190,7 +191,7 @@ export function Balance({ wallet, balance, onBalanceUpdate, isLoading = false }:
           )}
 
           {/* Balance Actions */}
-          <div className="flex flex-wrap justify-center gap-2 pt-5 border-t">
+          {!isPopup && <div className="flex flex-wrap justify-center gap-2 pt-5 border-t">
             <Button
               variant="outline"
               size="sm"
@@ -211,12 +212,12 @@ export function Balance({ wallet, balance, onBalanceUpdate, isLoading = false }:
               <Unlock className="h-4 w-4" />
               Decrypt Balance
             </Button>
-          </div>
+          </div>}
         </CardContent>
       </Card>
 
       {/* Wallet Information */}
-      <Card>
+      {!isPopup && <Card>
         <CardHeader>
           <CardTitle>Wallet Information</CardTitle>
         </CardHeader>
@@ -315,7 +316,7 @@ export function Balance({ wallet, balance, onBalanceUpdate, isLoading = false }:
             </div>
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
       {/* Dialogs */}
       <EncryptBalanceDialog

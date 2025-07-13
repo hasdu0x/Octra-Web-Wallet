@@ -8,9 +8,11 @@ const MU_FACTOR = 1_000_000;
 export async function fetchBalance(address: string): Promise<BalanceResponse> {
   try {
     // Fetch both balance and staging data like CLI does
+    const apiBase = typeof chrome !== 'undefined' && chrome.runtime ? 'https://octra.network' : '/api';
+    
     const [balanceResponse, stagingResponse] = await Promise.all([
-      fetch(`/api/balance/${address}`),
-      fetch(`/api/staging`).catch(() => ({ ok: false }))
+      fetch(`${apiBase}/balance/${address}`),
+      fetch(`${apiBase}/staging`).catch(() => ({ ok: false }))
     ]);
     
     if (!balanceResponse.ok) {
@@ -59,7 +61,9 @@ export async function fetchBalance(address: string): Promise<BalanceResponse> {
 
 export async function fetchEncryptedBalance(address: string, privateKey: string): Promise<EncryptedBalanceResponse | null> {
   try {
-    const response = await fetch(`/api/view_encrypted_balance/${address}`, {
+    const apiBase = typeof chrome !== 'undefined' && chrome.runtime ? 'https://octra.network' : '/api';
+    
+    const response = await fetch(`${apiBase}/view_encrypted_balance/${address}`, {
       headers: {
         'X-Private-Key': privateKey
       }
@@ -86,6 +90,8 @@ export async function fetchEncryptedBalance(address: string, privateKey: string)
 
 export async function encryptBalance(address: string, amount: number, privateKey: string): Promise<{ success: boolean; tx_hash?: string; error?: string }> {
   try {
+    const apiBase = typeof chrome !== 'undefined' && chrome.runtime ? 'https://octra.network' : '/api';
+    
     const encData = await fetchEncryptedBalance(address, privateKey);
     if (!encData) {
       return { success: false, error: "Cannot get balance" };
@@ -103,7 +109,7 @@ export async function encryptBalance(address: string, amount: number, privateKey
       encrypted_data: encryptedValue
     };
     
-    const response = await fetch('/api/encrypt_balance', {
+    const response = await fetch(`${apiBase}/encrypt_balance`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -125,6 +131,8 @@ export async function encryptBalance(address: string, amount: number, privateKey
 
 export async function decryptBalance(address: string, amount: number, privateKey: string): Promise<{ success: boolean; tx_hash?: string; error?: string }> {
   try {
+    const apiBase = typeof chrome !== 'undefined' && chrome.runtime ? 'https://octra.network' : '/api';
+    
     const encData = await fetchEncryptedBalance(address, privateKey);
     if (!encData) {
       return { success: false, error: "Cannot get balance" };
@@ -146,7 +154,7 @@ export async function decryptBalance(address: string, amount: number, privateKey
       encrypted_data: encryptedValue
     };
     
-    const response = await fetch('/api/decrypt_balance', {
+    const response = await fetch(`${apiBase}/decrypt_balance`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -168,7 +176,8 @@ export async function decryptBalance(address: string, amount: number, privateKey
 
 export async function getAddressInfo(address: string): Promise<any> {
   try {
-    const response = await fetch(`/api/address/${address}`);
+    const apiBase = typeof chrome !== 'undefined' && chrome.runtime ? 'https://octra.network' : '/api';
+    const response = await fetch(`${apiBase}/address/${address}`);
     if (response.ok) {
       return await response.json();
     }
@@ -181,7 +190,8 @@ export async function getAddressInfo(address: string): Promise<any> {
 
 export async function getPublicKey(address: string): Promise<string | null> {
   try {
-    const response = await fetch(`/api/public_key/${address}`);
+    const apiBase = typeof chrome !== 'undefined' && chrome.runtime ? 'https://octra.network' : '/api';
+    const response = await fetch(`${apiBase}/public_key/${address}`);
     if (response.ok) {
       const data = await response.json();
       return data.public_key;
@@ -195,6 +205,8 @@ export async function getPublicKey(address: string): Promise<string | null> {
 
 export async function createPrivateTransfer(fromAddress: string, toAddress: string, amount: number, fromPrivateKey: string): Promise<PrivateTransferResult> {
   try {
+    const apiBase = typeof chrome !== 'undefined' && chrome.runtime ? 'https://octra.network' : '/api';
+    
     const addressInfo = await getAddressInfo(toAddress);
     if (!addressInfo || !addressInfo.has_public_key) {
       return { success: false, error: "Recipient has no public key" };
@@ -213,7 +225,7 @@ export async function createPrivateTransfer(fromAddress: string, toAddress: stri
       to_public_key: toPublicKey
     };
     
-    const response = await fetch('/api/private_transfer', {
+    const response = await fetch(`${apiBase}/private_transfer`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -239,7 +251,8 @@ export async function createPrivateTransfer(fromAddress: string, toAddress: stri
 
 export async function getPendingPrivateTransfers(address: string, privateKey: string): Promise<PendingPrivateTransfer[]> {
   try {
-    const response = await fetch(`/api/pending_private_transfers?address=${address}`, {
+    const apiBase = typeof chrome !== 'undefined' && chrome.runtime ? 'https://octra.network' : '/api';
+    const response = await fetch(`${apiBase}/pending_private_transfers?address=${address}`, {
       headers: {
         'X-Private-Key': privateKey
       }
@@ -258,13 +271,15 @@ export async function getPendingPrivateTransfers(address: string, privateKey: st
 
 export async function claimPrivateTransfer(recipientAddress: string, privateKey: string, transferId: string): Promise<ClaimResult> {
   try {
+    const apiBase = typeof chrome !== 'undefined' && chrome.runtime ? 'https://octra.network' : '/api';
+    
     const data = {
       recipient_address: recipientAddress,
       private_key: privateKey,
       transfer_id: transferId
     };
     
-    const response = await fetch('/api/claim_private_transfer', {
+    const response = await fetch(`${apiBase}/claim_private_transfer`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -289,9 +304,11 @@ export async function claimPrivateTransfer(recipientAddress: string, privateKey:
 
 export async function sendTransaction(transaction: Transaction): Promise<{ success: boolean; hash?: string; error?: string }> {
   try {
+    const apiBase = typeof chrome !== 'undefined' && chrome.runtime ? 'https://octra.network' : '/api';
+    
     console.log('Sending transaction:', JSON.stringify(transaction, null, 2));
     
-    const response = await fetch(`/api/send-tx`, {
+    const response = await fetch(`${apiBase}/send-tx`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -394,7 +411,8 @@ export function createTransaction(
 // New function to fetch pending transactions from staging
 export async function fetchPendingTransactions(address: string): Promise<PendingTransaction[]> {
   try {
-    const response = await fetch(`/api/staging`);
+    const apiBase = typeof chrome !== 'undefined' && chrome.runtime ? 'https://octra.network' : '/api';
+    const response = await fetch(`${apiBase}/staging`);
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -433,7 +451,8 @@ export async function fetchPendingTransactions(address: string): Promise<Pending
 // New function to fetch specific pending transaction by hash
 export async function fetchPendingTransactionByHash(hash: string): Promise<PendingTransaction | null> {
   try {
-    const response = await fetch(`/api/staging`);
+    const apiBase = typeof chrome !== 'undefined' && chrome.runtime ? 'https://octra.network' : '/api';
+    const response = await fetch(`${apiBase}/staging`);
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -482,9 +501,11 @@ interface AddressApiResponse {
 
 export async function fetchTransactionHistory(address: string): Promise<AddressHistoryResponse> {
   try {
+    const apiBase = typeof chrome !== 'undefined' && chrome.runtime ? 'https://octra.network' : '/api';
+    
     // Fetch both confirmed and pending transactions
     const [confirmedResponse, pendingTransactions] = await Promise.all([
-      fetch(`/api/address/${address}`),
+      fetch(`${apiBase}/address/${address}`),
       fetchPendingTransactions(address)
     ]);
     
@@ -565,7 +586,8 @@ export async function fetchTransactionHistory(address: string): Promise<AddressH
 
 export async function fetchTransactionDetails(hash: string): Promise<TransactionDetails> {
   try {
-    const response = await fetch(`/api/tx/${hash}`);
+    const apiBase = typeof chrome !== 'undefined' && chrome.runtime ? 'https://octra.network' : '/api';
+    const response = await fetch(`${apiBase}/tx/${hash}`);
     
     if (!response.ok) {
       const errorText = await response.text();
