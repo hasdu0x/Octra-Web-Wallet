@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Octra Web Wallet",
+  "version": "1.0.0",
+  "description": "Secure web wallet for the Octra blockchain",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://octra.network/*"
+  ],
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "Octra Web Wallet",
+    "default_icon": {
+      "16": "icon16.png",
+      "32": "icon32.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icon16.png",
+    "32": "icon32.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["*.js", "*.css", "*.wasm"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
