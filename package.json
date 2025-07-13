@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:extension": "npm run build && npm run copy-manifest && npm run copy-popup",
-    "copy-popup": "cp dist/src/popup.html dist/popup.html",
+    "build:extension": "npm run build && npm run copy-extension-files",
+    "copy-extension-files": "cp public/manifest.json dist/ && cp dist/src/popup.html dist/popup.html",
     "lint": "eslint .",
     "preview": "vite preview"
   },
